@@ -158,14 +158,45 @@ namespace netcoreWebapi.Controllers
             return Json(string.Format("Xml Parsed!!"));
         }
 
-        [HttpGet("saveSettings")]
-        public JsonResult Get(string[] settingsFromClient)
-        {
-            string settingsCookie = Request.Cookies["saveSettings"];
-            if (settingsCookie == null)
-            {
-                return Json("Error. Cookie is incorrect.");
-            }
+	[HttpGet("saveSettings")]
+	public Microsoft.AspNetCore.Mvc.JsonResult Get(string[] settingsFromClient)
+	{
+	    string settingsCookie = Microsoft.AspNetCore.Http.Request.Cookies["saveSettings"];
+	    if (settingsCookie == null)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Error. Cookie is incorrect.");
+	    }
+
+	    string[] settingsTokens = settingsCookie.Split(",");
+	    if (settingsTokens.Length < 2)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Malformed cookie");
+	    }
+
+	    string base64Text = settingsTokens[0].Replace("settings", "");
+
+	    // Check md5sum
+	    string cookieMD5Sum = settingsTokens[1];
+	    string calcMD5Sum = CalcMD5Hex(base64Text);
+	    if (cookieMD5Sum != calcMD5Sum)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Wrong md5");
+	    }
+
+	    // Store on filesystem
+	    string[] settings2 = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64Text)).Split(",");
+
+	    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(settings2[0]))
+	    {
+	        for (int i = 1; i < settings2.Length; i++)
+	        {
+	            sw.Write(settings2[i]);
+	        }
+	    }
+
+	    return new Microsoft.AspNetCore.Mvc.JsonResult("Settings saved");
+	}
+
 
             string[] settingsTokens = settingsCookie.Split(",");
             if (settingsTokens.Length < 2)
@@ -216,5 +247,6 @@ namespace netcoreWebapi.Controllers
         }
     }
 }
+
 
 
