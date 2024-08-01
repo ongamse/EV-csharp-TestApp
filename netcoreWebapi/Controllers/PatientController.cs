@@ -45,6 +45,9 @@ namespace netcoreWebapi.Controllers
 	    return RedirectToAction("Index");
 	}
 
+	    return RedirectToAction("Index");
+	}
+
             return RedirectToAction("Index");
         }
 
@@ -105,5 +108,6 @@ namespace netcoreWebapi.Controllers
 
     }
 }
+
 
 
