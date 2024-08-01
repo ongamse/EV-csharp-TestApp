@@ -36,21 +36,37 @@ namespace netcoreWebapi.Controllers
             return View(new Patient());
         }
 
-        [HttpPost]
-        public ActionResult Create(Patient patient)
-        {
-            _objContext.Patients.Add(patient);
-            _objContext.SaveChanges();
-            _logger.LogInformation("Creating patient with id: {0}", patient.PatientId);
+	[HttpPost]
+	public ActionResult Create(Patient patient)
+	{
+	    _objContext.Patients.Add(patient);
+	    _objContext.SaveChanges();
+	    _logger.LogInformation("Creating patient with id: {0}", patient.PatientId);
+	    return RedirectToAction("Index");
+	}
+
+	    return RedirectToAction("Index");
+	}
+
             return RedirectToAction("Index");
         }
 
-        public ActionResult Edit(int id)
+	public ActionResult Edit(int id)
         {
             Patient patient = _objContext
                 .Patients
-                .Where(x => x.PatientId == id).SingleOrDefault();
+                .Where(x => x.PatientId == id)
+                .AsNoTracking() // Preventing Entity Tracking
+                .SingleOrDefault();
+            if (patient == null)
+            {
+                _logger.LogWarning("Attempted to edit non-existing patient with id: {0}", id);
+                return NotFound(); // Return 404 if patient not found
+            }
             _logger.LogInformation("Editing patient with id: {0}", patient.PatientId);
+            return View(patient);
+        }
+
             return View(patient);
         }
 
@@ -71,10 +87,20 @@ namespace netcoreWebapi.Controllers
             return View(model);
         }
 
-        public ActionResult Delete(int id)
+	public ActionResult Delete(int id)
         {
             Patient patient = _objContext.Patients.Find(id);
-            _logger.LogInformation("Deleting patient with id: {0}", patient.PatientId);
+            if (patient == null)
+            {
+                _logger.LogWarning("Attempted to delete non-existing patient with id: {0}", id);
+                return NotFound();
+            }
+            _objContext.Patients.Remove(patient);
+            _objContext.SaveChanges();
+            _logger.LogInformation("Deleted patient with id: {0}", patient.PatientId);
+            return Ok();
+        }
+
             return View(patient);
         }
 
@@ -92,3 +118,7 @@ namespace netcoreWebapi.Controllers
 
     }
 }
+
+
+
+

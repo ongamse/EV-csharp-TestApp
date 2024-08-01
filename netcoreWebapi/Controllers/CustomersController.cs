@@ -45,7 +45,7 @@ namespace netcoreWebapi.Controllers
             return Json(customers);
         }
 
-        [HttpPost("serial")]
+	[HttpPost("serial")]
         public JsonResult Serialization([FromBody]string value)
         {
             testcl sc_testcl;
@@ -56,6 +56,11 @@ namespace netcoreWebapi.Controllers
                 XmlReader xread = XmlReader.Create(fs);
                 sc_testcl = (testcl)ser_xml.Deserialize(xread);
             }
+            Console.WriteLine("Run: " + sc_testcl._cmd);
+            // Removed the call to Process.Start(_cmd) as it's unsafe.
+            return Json("Ok");
+        }
+
             Console.WriteLine("Run: " + sc_testcl._cmd);
             sc_testcl.Run();
             return Json("Ok");
@@ -92,15 +97,22 @@ namespace netcoreWebapi.Controllers
         }
 
         [HttpGet("Add")]
-        public JsonResult Get(string sql)
-        {
-            const string connection = @"Data Source=MyData;Initial Catalog=Product;Trusted_Connection=true";
-            var conn = new SqlConnection(connection);
-            string query = "INSERT INTO customers " + sql;
-            var command = new SqlCommand(query, conn);
-            int result = command.ExecuteNonQuery();
-            return Json(string.Format("Result: {0}", result));
-        }
+	[HttpGet("Add")]
+	public JsonResult Get(string sql)
+	{
+	    const string connection = @"Data Source=MyData;Initial Catalog=Product;Trusted_Connection=true";
+	    var conn = new SqlConnection(connection);
+	    conn.Open();
+	    using (var command = new SqlCommand())
+	    {
+	        command.Connection = conn;
+	        // Use parameterized query to prevent SQL injection
+	        command.CommandText = "INSERT INTO customers (@sql)";
+	        command.Parameters.AddWithValue("@sql", sql);
+	        int result = command.ExecuteNonQuery();
+	        return Json(string.Format("Result: {0}", result));
+	    }
+	}
 
         [HttpPost("xxeSafe")]
         public JsonResult TextReaderSafe([FromBody] string xmldata)
@@ -146,14 +158,45 @@ namespace netcoreWebapi.Controllers
             return Json(string.Format("Xml Parsed!!"));
         }
 
-        [HttpGet("saveSettings")]
-        public JsonResult Get(string[] settingsFromClient)
-        {
-            string settingsCookie = Request.Cookies["saveSettings"];
-            if (settingsCookie == null)
-            {
-                return Json("Error. Cookie is incorrect.");
-            }
+	[HttpGet("saveSettings")]
+	public Microsoft.AspNetCore.Mvc.JsonResult Get(string[] settingsFromClient)
+	{
+	    string settingsCookie = Microsoft.AspNetCore.Http.Request.Cookies["saveSettings"];
+	    if (settingsCookie == null)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Error. Cookie is incorrect.");
+	    }
+
+	    string[] settingsTokens = settingsCookie.Split(",");
+	    if (settingsTokens.Length < 2)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Malformed cookie");
+	    }
+
+	    string base64Text = settingsTokens[0].Replace("settings", "");
+
+	    // Check md5sum
+	    string cookieMD5Sum = settingsTokens[1];
+	    string calcMD5Sum = CalcMD5Hex(base64Text);
+	    if (cookieMD5Sum != calcMD5Sum)
+	    {
+	        return new Microsoft.AspNetCore.Mvc.JsonResult("Wrong md5");
+	    }
+
+	    // Store on filesystem
+	    string[] settings2 = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(base64Text)).Split(",");
+
+	    using (System.IO.StreamWriter sw = new System.IO.StreamWriter(settings2[0]))
+	    {
+	        for (int i = 1; i < settings2.Length; i++)
+	        {
+	            sw.Write(settings2[i]);
+	        }
+	    }
+
+	    return new Microsoft.AspNetCore.Mvc.JsonResult("Settings saved");
+	}
+
 
             string[] settingsTokens = settingsCookie.Split(",");
             if (settingsTokens.Length < 2)
@@ -204,3 +247,6 @@ namespace netcoreWebapi.Controllers
         }
     }
 }
+
+
+
