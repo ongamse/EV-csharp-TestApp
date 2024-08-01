@@ -74,10 +74,20 @@ namespace netcoreWebapi.Controllers
             return View(model);
         }
 
-        public ActionResult Delete(int id)
+	public ActionResult Delete(int id)
         {
             Patient patient = _objContext.Patients.Find(id);
-            _logger.LogInformation("Deleting patient with id: {0}", patient.PatientId);
+            if (patient == null)
+            {
+                _logger.LogWarning("Attempted to delete non-existing patient with id: {0}", id);
+                return NotFound();
+            }
+            _objContext.Patients.Remove(patient);
+            _objContext.SaveChanges();
+            _logger.LogInformation("Deleted patient with id: {0}", patient.PatientId);
+            return Ok();
+        }
+
             return View(patient);
         }
 
@@ -95,4 +105,5 @@ namespace netcoreWebapi.Controllers
 
     }
 }
+
 
