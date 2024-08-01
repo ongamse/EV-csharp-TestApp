@@ -36,12 +36,15 @@ namespace netcoreWebapi.Controllers
             return View(new Patient());
         }
 
-        [HttpPost]
-        public ActionResult Create(Patient patient)
-        {
-            _objContext.Patients.Add(patient);
-            _objContext.SaveChanges();
-            _logger.LogInformation("Creating patient with id: {0}", patient.PatientId);
+	[HttpPost]
+	public ActionResult Create(Patient patient)
+	{
+	    _objContext.Patients.Add(patient);
+	    _objContext.SaveChanges();
+	    _logger.LogInformation("Creating patient with id: {0}", patient.PatientId);
+	    return RedirectToAction("Index");
+	}
+
             return RedirectToAction("Index");
         }
 
@@ -92,3 +95,4 @@ namespace netcoreWebapi.Controllers
 
     }
 }
+
